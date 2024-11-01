@@ -2,6 +2,8 @@ import express  from "express"
 import dotenv  from "dotenv"
 import routes from "./routes/index.js"
 import connectDB from "./config/db.js"
+import { connectProducer } from "./kafka/producer.js"
+import consumeUserEvents from "./kafka/consumer.js"
 const PORT = process.env.PORT || 3000
 dotenv.config();
 const app = express()
@@ -16,6 +18,9 @@ app.get('/', (req, res) => {
         message: "Hello"
     })
 })
+
+connectProducer().catch(console.error);
+consumeUserEvents().catch(console.error);
 
 // router middleware
 app.use("/api/v1", routes);

@@ -1,7 +1,5 @@
-// db.config.js
-import mongoose from "mongoose";
 import dotenv from "dotenv";
-
+import mongoose from "mongoose";
 dotenv.config();
 
 const MONGO_DB = process.env.MONGO_DB;

@@ -1,5 +1,8 @@
 import User from "../models/user.model.js"
 import mongoose from "mongoose";
+import getRedis from '../config/redis.js';
+import { sendUserEvent } from '../kafka/producer.js';
+
 
 export const findUserByAccountNumber = async (req, res, next) =>{
 
@@ -7,6 +10,8 @@ export const findUserByAccountNumber = async (req, res, next) =>{
 
     try {
         const user = await User.findOne({ accountNumber })
+
+        await sendUserEvent('USER_READ', req.user.id);
 
         if (!user){
             return res.status(400).json({
@@ -37,6 +42,8 @@ export const findUserByIdentityNumber = async (req, res, next) =>{
     try {
         const user = await User.findOne({ identityNumber })
 
+        await sendUserEvent('USER_READ', req.user.id);
+
         if (!user){
             return res.status(400).json({
                 success: true,
@@ -61,7 +68,24 @@ export const findUserByIdentityNumber = async (req, res, next) =>{
 export const getAllUsers = async (req, res, next) =>{
 
     try {
+
+        const redis = getRedis();
+
+        const cachedUser = await redis.get('users:list');
+
+        await sendUserEvent('USER_READ', req.user.id);
+        
+        if (cachedUser) {
+            return res.status(200).json({
+                success: true,
+                message: "Get All User Successfully",
+                data: JSON.parse(cachedUser)
+            });
+        }
+
         const users = await User.find()
+
+        await redis.setEx('users:list', 3600, JSON.stringify(users));
 
         return res.status(201).json({
             success: true,
@@ -88,6 +112,8 @@ export const updateUser = async (req, res) => {
   
     try {
       const updatedUser = await User.findByIdAndUpdate(id, user, { new: true });
+
+      await sendUserEvent('USER_UPDATED', req.user.id);
   
       if (!updatedUser) {
         await session.abortTransaction();
@@ -124,21 +150,22 @@ export const deleteUser = async (req, res) => {
     }
   
     try {
-      const deletedUser = await User.findByIdAndDelete(id);
+        const deletedUser = await User.findByIdAndDelete(id);
+        await sendUserEvent('USER_DELETED', req.user.id);
   
-      if (!deletedUser) {
-        return res.status(404).json({ success: false, message: "User not found" });
-      }
-  
-      return res.status(200).json({
-        success: true,
-        message: "User deleted successfully",
-        data: null
-      });
+        if (!deletedUser) {
+            return res.status(404).json({ success: false, message: "User not found" });
+        }
+    
+        return res.status(200).json({
+            success: true,
+            message: "User deleted successfully",
+            data: null
+        });
     } catch (error) {
-      console.error("Error when deleting user:", error.message);
-  
-      return res.status(500).json({ success: false, message: "Server Error" });
+        console.error("Error when deleting user:", error.message);
+    
+        return res.status(500).json({ success: false, message: "Server Error" });
     }
 };
   

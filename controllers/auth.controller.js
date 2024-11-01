@@ -1,5 +1,5 @@
 import User from "../models/user.model.js"
-import bcrypt from "bcryptjs"
+import { sendUserEvent } from '../kafka/producer.js';
 
 export const createUser = async (req, res) => {
     //TODO: handle transaction
@@ -7,7 +7,7 @@ export const createUser = async (req, res) => {
     try {
     const { username, email, password, identityNumber, accountNumber } = req.body;
 
-    const existingUser = await User.findOne({ email })
+    const existingUser = await User.findOne({ emailAddress: email })
 
     if (existingUser) {
         return res.status(400).json({ success: false, message: "User Already Exists!" });
@@ -21,7 +21,9 @@ export const createUser = async (req, res) => {
         accountNumber,
     });
 
-    await user.save();
+    const userRegist = await user.save();
+
+    await sendUserEvent('USER_CREATED', userRegist.id);
 
     return res.status(201).json({
         success: true,
@@ -56,7 +58,7 @@ export const login = async (req, res) => {
             });
         }
 
-        const user = await User.findOne({ $or: [{ username }, { email }] });
+        const user = await User.findOne({ $or: [{ userName: username }, { emailAddress: email }] });
 
         if (!user) {
             return res.status(400).json({ 
@@ -65,6 +67,8 @@ export const login = async (req, res) => {
                 data: null
             });
         }
+        
+        await sendUserEvent('USER_LOGIN', user.id);
 
         const isValidatedPassword = await user.isValidatedPassword(password, user.password);
 
