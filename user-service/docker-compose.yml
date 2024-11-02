@@ -1,0 +1,48 @@
+version: '3.8'
+services:
+  user-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - REDIS_URL=redis://redis:6379
+      - MONGO_URL=mongodb://mongo:27017/db_diah_betest
+      - KAFKA_BROKER=kafka:9092
+    depends_on:
+      - redis
+      - mongo
+      - kafka
+
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+
+  mongo:
+    image: mongo:4.4
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data-user:/data/db
+
+  kafka:
+    image: wurstmeister/kafka
+    environment:
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092  # Allow external connections
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+
+  zookeeper:
+    image: wurstmeister/zookeeper
+    ports:
+      - "2181:2181"
+
+volumes:
+  mongo-data-user: 

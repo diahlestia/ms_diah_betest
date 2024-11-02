@@ -1,0 +1,41 @@
+version: '3.8'
+services:
+  log-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "4000:4000"
+    environment:
+      - NODE_ENV=production
+      - MONGO_URL=mongodb://mongo:27017/db_diah_betest
+      - KAFKA_BROKER=kafka:9092
+    depends_on:
+      - mongo
+      - kafka
+
+  mongo:
+    image: mongo:4.4
+    ports:
+      - "27018:27017" 
+    volumes:
+      - mongo-data-log:/data/db 
+
+  kafka:
+    image: wurstmeister/kafka
+    environment:
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092  # Allow external connections
+    depends_on:
+      - zookeeper
+    ports:
+      - "9093:9092" 
+
+  zookeeper:
+    image: wurstmeister/zookeeper
+    ports:
+      - "2182:2181"
+
+volumes:
+  mongo-data-log:
