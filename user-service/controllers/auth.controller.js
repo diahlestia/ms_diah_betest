@@ -1,27 +1,29 @@
-import User from "../models/user.model.js"
-import { sendUserEvent } from '../kafka/producer.js';
+import { 
+    saveUserData,
+    getUserByEmailOrUsername,
+} from '../services/user.service.js'
+import { sendUserEvent } from '../utils/kafka.producer.js';
+import { validatePassword, generateJwtToken } from '../utils/user.helper.js'; // Adjust the path as necessary
 
-export const createUser = async (req, res) => {
-    //TODO: handle transaction
-    
+export const createUser = async (req, res) => {    
     try {
     const { username, email, password, identityNumber, accountNumber } = req.body;
 
-    const existingUser = await User.findOne({ emailAddress: email })
-
+    const existingUser = await getUserByEmailOrUsername(email)
+        
     if (existingUser) {
         return res.status(400).json({ success: false, message: "User Already Exists!" });
     }
 
-    const user = new User({
+    const user = {
         userName: username,
         emailAddress: email,
         password,
         identityNumber,
         accountNumber,
-    });
+    }
 
-    const userRegist = await user.save();
+    const userRegist = await saveUserData(user);
 
     await sendUserEvent('USER_CREATED', userRegist.id);
 
@@ -58,7 +60,7 @@ export const login = async (req, res) => {
             });
         }
 
-        const user = await User.findOne({ $or: [{ userName: username }, { emailAddress: email }] });
+        const user = await getUserByEmailOrUsername(email, username);
 
         if (!user) {
             return res.status(400).json({ 
@@ -70,7 +72,7 @@ export const login = async (req, res) => {
         
         await sendUserEvent('USER_LOGIN', user.id);
 
-        const isValidatedPassword = await user.isValidatedPassword(password, user.password);
+        const isValidatedPassword = await validatePassword(password, user.password);
 
         if (!isValidatedPassword) {
             return res.status(400).json({ 
@@ -79,8 +81,8 @@ export const login = async (req, res) => {
                 data: null
             });
         }
-
-        const token = user.getJwtToken();
+        
+        const token = generateJwtToken(user._id);
 
         return res.status(200).json({
             success: true,

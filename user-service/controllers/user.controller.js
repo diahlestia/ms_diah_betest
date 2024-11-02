@@ -1,7 +1,14 @@
-import User from "../models/user.model.js"
 import mongoose from "mongoose";
 import getRedis from '../config/redis.js';
-import { sendUserEvent } from '../kafka/producer.js';
+import { sendUserEvent } from '../utils/kafka.producer.js';
+import { 
+    getUser,
+    getUserById,
+    getUserByAccountNumber,  
+    getUserByIdentityNumber,
+    updateUserData,
+    deleteUserData
+} from '../services/user.service.js'
 
 
 export const findUserByAccountNumber = async (req, res, next) =>{
@@ -9,7 +16,7 @@ export const findUserByAccountNumber = async (req, res, next) =>{
     const { accountNumber } = req.params;
 
     try {
-        const user = await User.findOne({ accountNumber })
+        const user = await getUserByAccountNumber(accountNumber)
 
         await sendUserEvent('USER_READ', req.user.id);
 
@@ -40,7 +47,7 @@ export const findUserByIdentityNumber = async (req, res, next) =>{
     const { identityNumber } = req.params;
 
     try {
-        const user = await User.findOne({ identityNumber })
+        const user = await getUserByIdentityNumber(identityNumber)
 
         await sendUserEvent('USER_READ', req.user.id);
 
@@ -83,7 +90,7 @@ export const getAllUsers = async (req, res, next) =>{
             });
         }
 
-        const users = await User.find()
+        const users = await getUser()
 
         await redis.setEx('users:list', 3600, JSON.stringify(users));
 
@@ -111,21 +118,25 @@ export const updateUser = async (req, res) => {
     }
   
     try {
-      const updatedUser = await User.findByIdAndUpdate(id, user, { new: true });
+        const findUser = await getUserById(id)
+        
+        if (!findUser) {
+            return res.status(404).json({ success: false, message: "User not found" });
+        }
 
-      await sendUserEvent('USER_UPDATED', req.user.id);
-  
-      if (!updatedUser) {
-        await session.abortTransaction();
-        session.endSession();
-        return res.status(404).json({ success: false, message: "User not found" });
-      }
-  
-      return res.status(201).json({
-        success: true,
-        message: "User updated successfully",
-        data: updatedUser,
-      });
+        const updatedUser = await updateUserData(id, user);
+
+        await sendUserEvent('USER_UPDATED', req.user.id);
+    
+        if (!updatedUser) {
+            return res.status(404).json({ success: false, message: "User not found" });
+        }
+    
+        return res.status(201).json({
+            success: true,
+            message: "User updated successfully",
+            data: updatedUser,
+        });
     } catch (error) {
       console.error("Error when updating user:", error.message);
 
@@ -150,7 +161,13 @@ export const deleteUser = async (req, res) => {
     }
   
     try {
-        const deletedUser = await User.findByIdAndDelete(id);
+        const findUser = await getUserById(id)
+        
+        if (!findUser) {
+            return res.status(404).json({ success: false, message: "User not found" });
+        }
+
+        const deletedUser = await deleteUserData(id);
         await sendUserEvent('USER_DELETED', req.user.id);
   
         if (!deletedUser) {

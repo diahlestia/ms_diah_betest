@@ -1,7 +1,6 @@
 {
-  "name": "dbetes",
+  "name": "log-service",
   "version": "1.0.0",
-  "description": "",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -9,18 +8,12 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
+  "description": "",
   "dependencies": {
-    "bcryptjs": "^2.4.3",
     "dotenv": "^16.4.5",
     "express": "^4.21.1",
-    "jsonwebtoken": "^9.0.2",
     "kafkajs": "^2.2.4",
     "mongoose": "^8.8.0",
-    "redis": "^4.7.0",
-    "validator": "^13.12.0"
-  },
-  "devDependencies": {
-    "jest": "^29.7.0"
-  },
-  "type": "module"
+    "redis": "^4.7.0"
+  }
 }

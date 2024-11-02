@@ -2,14 +2,19 @@ import express from 'express'
 const router = express.Router()
 import auth from '../middleware/auth.js'
 // import controllers
-import { 
-    deleteUser, 
-    findUserByAccountNumber, 
-    findUserByIdentityNumber, 
-    getAllUsers, 
-    updateUser 
+
+import {
+    createUser,
+    login
+} from "../controllers/auth.controller.js"
+
+import {
+    findUserByAccountNumber,
+    findUserByIdentityNumber,
+    getAllUsers,
+    updateUser,
+    deleteUser,
 } from "../controllers/user.controller.js"
-import { createUser, login } from "../controllers/auth.controller.js"
 
 router.route("/register").post(createUser)
 router.route("/login").post(login)

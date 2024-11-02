@@ -1,8 +1,8 @@
-import Log from '../models/log.model.js';
+import { saveLogData } from '../services/log.service.js';
 
 export const createLog = async (operation, userId) => {
     try {
-        await Log.create({
+        await saveLogData({
             operation,
             userId,
         });
